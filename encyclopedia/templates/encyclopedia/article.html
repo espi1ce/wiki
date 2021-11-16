@@ -1,0 +1,17 @@
+{% extends "encyclopedia/layout.html" %}
+
+{% block title %}
+{{ title }}
+{% endblock %}
+
+{% block body %}
+{{ article | safe }}
+
+    <form action="\" method="post">
+        {% csrf_token %}
+        <button class="btn-edit btn btn-primary" id="btn-back">Back</button>
+
+    </form>
+
+
+{% endblock %}
