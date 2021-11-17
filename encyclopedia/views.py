@@ -1,14 +1,14 @@
+from django.core.files import utils
 from django.shortcuts import render
 from django.http.response import Http404, HttpResponseNotFound, HttpResponseRedirect
 from django.urls import reverse
-
 import random
-
 import markdown2
-from .forms import CreateNewPageForm as CNPF
-from encyclopedia import forms
+
 
 from . import util
+from .forms import CreateNewPageForm as CNPF
+from encyclopedia import forms
 
 
 def index(request):
@@ -16,7 +16,39 @@ def index(request):
         "entries": util.list_entries()
     })
 
-def create(request):
+def article(request, title):
+    art = util.get_entry(title)
+
+    if art is None:
+        return HttpResponseNotFound(render(request, "encyclopedia/error404.html",{
+        "title": "Not found 404",
+        "error404": "Page not found"
+    }))
+
+    return render(request, "encyclopedia/article.html", {
+        "title": title,
+        "article": markdown2.markdown(art)
+    })
+
+def search(request):
+    names = util.list_entries()
+
+    for name in names:
+        if request.GET["q"].lower() == name.lower():
+            return HttpResponseRedirect(reverse("encyclopedia:article", args=[name]))
+
+    name_articles = []
+
+    for name in names:
+        if ((name.lower()).find(request.GET["q"].lower()) != -1):
+            name_articles.append(name)
+    
+    return render(request, "encyclopedia/search.html", {
+        "req": request.GET["q"],
+        "name_articles": name_articles
+    })
+
+def create_new_page(request):
     if request.method == "POST":
         request.encoding = 'utf-8'
         cnpf = CNPF(request.POST)
@@ -36,21 +68,9 @@ def create(request):
             util.save_entry(cnpf.cleaned_data["name_page"], cnpf.cleaned_data["content"])
             return HttpResponseRedirect(reverse("encyclopedia:article", args=[cnpf.cleaned_data["name_page"]]))
 
-    return render(request, "encyclopedia/create.html", {
+    return render(request, "encyclopedia/createnewpage.html", {
         "form": CNPF()
     })
-
-def random(request):
-    return render(request, "encyclopedia/random.html")
-
-def article(request, title):
-    art = util.get_entry(title)
-
-    if art is None:
-        return HttpResponseNotFound(render(request, "encyclopedia/error404.html",{
-        "title": "Not found 404",
-        "error404": "Page not found"
-    }))
 
 def edit(request):
     if request.method == 'POST':
@@ -87,13 +107,10 @@ def save_edit(request):
         "error": "Save Edit error"
     })
 
-def rander(request):
+def rand(request):
     names = util.list_entries()
     name = names[random.randint(0, len(names) - 1)]
-    return render(request, 'encyclopedia/article.html', {
-        "title": name,
-        "article": markdown2.markdown(util.get_entry(name))
-    })
+    return HttpResponseRedirect(reverse('encyclopedia:article', args=[name]))
 
 
 def pageNotFound(request, exception):
